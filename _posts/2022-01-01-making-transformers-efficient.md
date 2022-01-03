@@ -46,7 +46,7 @@ In a standard transformer encoder, we use a mechanism called self-attention. We 
 def self_attention(query, key, value):
     dim = key.shape[-1]
     # (Query * tranpose(key)) / sqrt(dim)
-    scores = torch.bmm(query, key.transpose(-2, -1)) / math.sqrt(dim)
+    scores = torch.bmm(query, key.transpose(-2, -1)) / sqrt(dim)
     weights = F.softmax(scores, dim = -1)
     return torch.bmm(weights, value)
 ```
@@ -63,10 +63,28 @@ In this paper, they claim that self-attention is approximately low rank. (While 
   <img src="/images/making-transformers-efficient/linformer_eigenvalues_diagram.png" width="100%">
 </p>
 
-Here the author's do an empircal look indo a singular value decomposition (SVD), where the 
+Here the author's do an empirical look into the RoBERTa models, and applied a singular value decomposition (SVD), where they found that normalized cumulative singular value had long-tail distribution, essentially meaning that the majority of the information was stored in only a few layers. They found that distribution of the singular values in the higher layers was more skewed, meaning that the information is concentrated in only the largest singluar values, and the rank of the matrix softmax($\frac{QK^T}{\sqrt{d_k}})$ is low rank.
 <p align="center">
   <img src="/images/making-transformers-efficient/linformer-self-attention.png" width="60%">
 </p>
+
+Linear attention is computed as softmax($\frac{Q(E_iK^T)}{\sqrt{d_k}})F_iV$, where $E_i,F_i \in \mathbb{R}^{n x k}$ are linear projections which we use to down-project our key and value vectors (to a lower dimension) when computing self-attention. This allows us to compute an $(n x k)$ matrix instead of an $(n x n)$ matrix which gives $O(nk)$ runtime. It's worth noting that $E_i$ and $F_i$ are generally fixed projection matrices, and not learnable.  
+
+They suggest to choose $k$ such that $k = min(\Theta(9dlog(d)/\epsilon^2),5\Theta(log(n)\epsilon^2))$ with $\epsilon$ error. Since $k$ doesn't depend on the sequence length, and is treated as a constant, the runtime of linear self-attention is therefore $O(n)$. 
+
+The authors also experiment with different types of parameter sharing between the projection matrices. They used **headwise sharing**, where $E_i$ and $F_i$ are shared between every head within the same layer. They used **key-value sharing** where they use headwise sharing, but the projection matrices where they use $F_i = E_i$, so each key and value vector gets down projected by the same matrix $E_i$. Lastly they tried **layer-wise sharing** where they used the same projected matrix $E_i$ for every $E_i$ and $F_i$ projection across every head and every layer.
+
+<p align="center">
+  <img src="/images/making-transformers-efficient/linformer-benchmarks.png" width="100%">
+</p>
+
+The results end scoring only about half a point below than RoBERTa, which seem to show a lot of promise for the actual performance of the model. 
+
+<p align="center">
+  <img src="/images/making-transformers-efficient/linformer-vs-transformer.png" width="100%">
+</p>
+
+The real difference comes when the authors compared the linformer vs a standard transformer(not specified in the paper). The left table is time saved during inference, and the right table shows memory saved. As we can see, which get a massive speed up, even at small sequence lengths, despite only a marginal decrease in performance vs RoBERTa. 
 
 ## Reformer 
 To be added
