@@ -24,19 +24,22 @@ While transformers have achieved unprecedented levels of performance, they've al
 ## DistilBERT
 DistilBERT ([Sanh et al. 2019](https://arxiv.org/pdf/1910.01108.pdf)), is a BERT based model that is 40% smaller than BERT-base, 60% faster, all the while retaining 97% of the performance. They were able to achieve this through a process called knowledge distillation, where a student model is trained to reproduce the behaviour of a teacher model. They do this by having 3 different loss functions: distillation loss, cosine embedding loss, and masked language modelling loss.
 
-During normal training, we get logits after the final linear layer, which we then push through a softmax to get our probability distributions. In an ideal world, only the predicted value will be high (near 1), while the rest will be near zero. Distillation loss, defined as $$L_ce = \Sigma{t_i * log(s_i)}$$. This is the same as standard cross entropy loss, but instead of comparing our student predictions to the label, we compare it to teacher predictions, in order for the student model to better mimmic the teacher model. 
+During normal training, we get logits after the final linear layer, which we then push through a softmax to get our probability distributions. In an ideal world, only the predicted value will be high (near 1), while the rest will be near zero. Distillation loss, defined as $L_{ce} = \Sigma{t_i * log(s_i)}$. Here $\{t_i}$ represents the teacher's output and $\{s_i}$ is the student's output. If you notice, this is actually the same formula as standard cross entropy loss, but instead of comparing our student predictions to the label, we compare it to the teacher's predictions, so as our model can learn to mimmic the teacher model. We want the ouput one-hot encoding vector's from the teacher and student model to be as close as possible.
 
 Cosine embedding loss computes the measure of the loss between two input vectors are similar or dissimilar, by using the cosine distance. The authors of the paper claimed that this helped align the direction of the student and teacher hiddens state vectors.
 
 The final loss function is masked language modelling, which is just cross entropy loss between the student output and the label. This is the only loss function that doesn't "learn" from the teacher model.
 
+Lastly, DistilBERT also optimize the training of their model according to RoBERTa ([Liu et al. 2019](https://arxiv.org/pdf/1907.11692.pdf)), which found that the original BERT model was underfit and it's performance increased when it was trained longer on more data. It also dropped the next sentence prediction task during the pre-training of the model and dynamically changed the masking pattern on the training data during language modelling, which further improved the performance of the model. 
 
 
 ## A brief recap of transformer self-attention
 
-<img src="/images/making-transformers-efficient/scaled_attention.png">
+<p align="center">
+  <img src="/images/making-transformers-efficient/linformer-self-attention.png" width = "60%">
+</p>
 
-In a standard transformer encoder, we use a mechanism called self-attention. We have an input embedding that goes through three different linear transformations (generally which are learnable) in order to create the query, key, and value vectors. We the do a matrix multiplication $$QK^T$$, and then scale it by $$\sqrt{d_k}$$. We then compute the softmax($$\frac{QK^T}{\sqrt{d_k}}$$) and then do one final matrix multiplication with the value vector softmax($$\frac{QK^T}{\sqrt{d_k}}V$$).
+In a standard transformer encoder, we use a mechanism called self-attention. We have an input embedding that goes through three different linear transformations (generally which are learnable) in order to create the query, key, and value vectors. We the do a matrix multiplication $QK^T$, and then scale it by $\frac{1}{\sqrt{d_k}}$. We then compute the softmax($\frac{QK^T}{\sqrt{d_k}}$) and then do one final matrix multiplication with the value vector softmax($\frac{QK^T}{\sqrt{d_k}})V$.
 
 
 ```
@@ -48,10 +51,22 @@ def self_attention(query, key, value):
     return torch.bmm(weights, value)
 ```
 
-The output tensor of a self-attention has the shape of [bs, L, L] where bs is the batch size, and L is the number of tokens in the sequence length. As you can see self-attention is $$O(n^{2})$$, where n is the sequence length. 
+The output tensor of a self-attention has the shape of [bs, L, L] where bs is the batch size, and L is the number of tokens in the sequence length. As you can see self-attention is $O(n^{2})$ in both time and space complexity, because each token needs to attend to every other token in the sequence. Because of this, large language models that use traditional self-attention require an enormous amount of compute and memory in order to compute long sequences. 
+
+
 
 ## Linformer
-To be added
+The Linformer paper ([Wang et al. 2020](https://arxiv.org/pdf/2006.04768.pdf)) introduced a methodology for self-attention with linear complexity. 
+
+In this paper, they claim that self-attention is approximately low rank. (While the paper includes  a couple proofs that would be too complicated to work through for an introduction, it's definitely worth checking out. [Heres a good video that works through the proofs](https://www.youtube.com/watch?v=-_2AF9Lhweo))
+<p align="center">
+  <img src="/images/making-transformers-efficient/linformer_eigenvalues_diagram.png" width="100%">
+</p>
+
+Here the author's do an empircal look indo a singular value decomposition (SVD), where the 
+<p align="center">
+  <img src="/images/making-transformers-efficient/linformer-self-attention.png" width="60%">
+</p>
 
 ## Reformer 
 To be added
