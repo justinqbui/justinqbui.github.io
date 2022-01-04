@@ -36,7 +36,7 @@ Lastly, DistilBERT also optimize the training of their model according to RoBERT
 ## A brief recap of transformer self-attention
 
 <p align="center">
-  <img src="/images/making-transformers-efficient/linformer-self-attention.png" width = "60%">
+  <img src="/images/making-transformers-efficient/scaled_attention.png" width = "60%">
 </p>
 
 In a standard transformer encoder, we use a mechanism called self-attention. We have an input embedding that goes through three different linear transformations (generally which are learnable) in order to create the query, key, and value vectors. We the do a matrix multiplication $QK^T$, and then scale it by $\frac{1}{\sqrt{d_k}}$. We then compute the softmax($\frac{QK^T}{\sqrt{d_k}}$) and then do one final matrix multiplication with the value vector softmax($\frac{QK^T}{\sqrt{d_k}})V$.
