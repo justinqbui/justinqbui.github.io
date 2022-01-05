@@ -12,7 +12,7 @@
 
 # theme                  : "minimal-mistakes-jekyll"
 # remote_theme           : "mmistakes/minimal-mistakes"
-minimal_mistakes_skin    : "contrast" #"default" # "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+minimal_mistakes_skin    : "aqua" # "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
 
 # Site Settings
 locale                   : "en-US"
@@ -104,13 +104,13 @@ analytics:
 author:
   name             : "Justin Bui"
   avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
-  bio              : "CS student interested in ML and data science."
+  bio              : "CS student interested in ML, SWE, and data science."
   location         : "San Jose, CA"
   email            : #"justinqbui@gmail.com"
   links:
     - label: "justinqbui@gmail.com"
       icon: "fas fa-fw fa-envelope-square"
-     # url: "justinqbui@gmail.com"
+      url: "justinqbui@gmail.com"
     - label: "Website"
       icon: "fas fa-fw fa-link"
       # url: "https://your-website.com"

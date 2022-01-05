@@ -1,6 +1,7 @@
 ---
 title: "Making Transformers Efficient, an Introduction"
 excerpt_separator: "<!--more-->"
+classes: "wide"
 categories:
   - Deep Learning
 
@@ -36,13 +37,13 @@ Lastly, DistilBERT also optimize the training of their model according to RoBERT
 ## A brief recap of transformer self-attention
 
 <p align="center">
-  <img src="/images/making-transformers-efficient/scaled_attention.png" width = "60%">
+  <img src="/images/making-transformers-efficient/scaled_attention.png" width = "40%">
 </p>
 
 In a standard transformer encoder, we use a mechanism called self-attention. We have an input embedding that goes through three different linear transformations (generally which are learnable) in order to create the query, key, and value vectors. We the do a matrix multiplication $QK^T$, and then scale it by $\frac{1}{\sqrt{d_k}}$. We then compute the softmax($\frac{QK^T}{\sqrt{d_k}}$) and then do one final matrix multiplication with the value vector softmax($\frac{QK^T}{\sqrt{d_k}})V$.
 
 
-```
+```python
 def self_attention(query, key, value):
     dim = key.shape[-1]
     # (Query * tranpose(key)) / sqrt(dim)
@@ -65,7 +66,7 @@ In this paper, they claim that self-attention is approximately low rank. (While 
 
 Here the author's do an empirical look into the RoBERTa models, and applied a singular value decomposition (SVD), where they found that normalized cumulative singular value had long-tail distribution, essentially meaning that the majority of the information was stored in only a few layers. They found that distribution of the singular values in the higher layers was more skewed, meaning that the information is concentrated in only the largest singluar values, and the rank of the matrix softmax($\frac{QK^T}{\sqrt{d_k}})$ is low rank.
 <p align="center">
-  <img src="/images/making-transformers-efficient/linformer-self-attention.png" width="60%">
+  <img src="/images/making-transformers-efficient/linformer-self-attention.png" width="40%">
 </p>
 
 Linear attention is computed as softmax($\frac{Q(E_iK^T)}{\sqrt{d_k}})F_iV$, where $E_i,F_i \in \mathbb{R}^{n x k}$ are linear projections which we use to down-project our key and value vectors (to a lower dimension) when computing self-attention. This allows us to compute an $(n x k)$ matrix instead of an $(n x n)$ matrix which gives $O(nk)$ runtime. It's worth noting that $E_i$ and $F_i$ are generally fixed projection matrices, and not learnable.  
@@ -89,3 +90,4 @@ The real difference comes when the authors compared the linformer vs a standard 
 ## Reformer 
 To be added
 
+## Retroformer
