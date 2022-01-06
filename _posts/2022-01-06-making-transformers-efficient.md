@@ -11,6 +11,7 @@ tags:
   - reformer
   - distilbert
   - NLP
+  - RETRO
 ---
 
 ## Introduction
@@ -162,6 +163,7 @@ Cross-attention differs from self-attention because in self-attention, the query
 
 The decoder stack is made up of a standard transformer decoder (like one found in GPT), and interweaves a RETRO decoder between every 3rd layer starting at layer 9. Here we take an input embedding $X$ and apply causal mask (i.e can't look at future words/tokens) to get output $H$. When we reach the first RETRO block, we take the activation $E$ from the final layer of the encoder. FOr every subsequent RETRO block that we hit, we compute the chunked cross-attention of $H$ and $E$. At the end of each block (for both the standard decoder and RETRO decoder), we process the output with a feed forward network. Once we've iterated through all the layers of the decoder, we can get our output logits which we can push through a softmax to get our probability distribution of our next word choice.
 
-RETRO opens up a whole new field, where the authors experimented with RETROfitting pre-trained models, and saw a boost in performance. Check out the original paper where they addressed much more in depth about training and evaluating the performance of the model, especially with regard to test set leakage.
+RETRO opens up a whole new field, where the authors experimented with RETROfitting pre-trained models, and saw a boost in performance. Check out the original paper where they addressed much more in depth about training and evaluating the performance of the model, especially with regard to test set leakage. RETRO is able to achieve GPT-3 level performance with 25x fewer parameters.
 
+It's also worth checking out OpenAI's ([WebGPT](https://openai.com/blog/improving-factual-accuracy/)), which is a GPT based transformer model with a database. 
 
