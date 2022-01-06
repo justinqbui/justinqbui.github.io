@@ -158,7 +158,7 @@ class FeedForward(nn.Module):
         x = self.FFN(x)
         return x
 ```
-Dropout randomly zeroes out some elements from an input tensor with some probability $p$. This methods helps regularize the network which makes it more robust and avoid overfitting. Note that dropout only occurs during the training phase, when we validate the model, dropout is automatically set to 0.
+Dropout randomly zeroes out some elements from an input tensor with some probability $p$. This methods helps regularize the network which makes it more robust and avoid overfitting. Note that dropout only occurs during the training phase, when we validate the model, dropout is automatically set to 0. We also generally make the hidden dimension of the network 2-4x larger than the embedding dimension.
 
 ## Putting the Encoder Together
 ```python

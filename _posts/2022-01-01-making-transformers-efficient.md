@@ -85,9 +85,56 @@ The results end scoring only about half a point below than RoBERTa, which seem t
   <img src="/images/making-transformers-efficient/linformer-vs-transformer.png" width="100%">
 </p>
 
-The real difference comes when the authors compared the linformer vs a standard transformer(not specified in the paper). The left table is time saved during inference, and the right table shows memory saved. As we can see, which get a massive speed up, even at small sequence lengths, despite only a marginal decrease in performance vs RoBERTa. 
+The real difference comes when the authors compared the linformer(diagram shows linformer with layer-wise sharing) vs a standard transformer(not specified in the paper). The left table is time saved during inference, and the right table shows memory saved. As we can see, we get a massive speed up, even at small sequence lengths, despite only a marginal decrease in performance vs RoBERTa. 
 
 ## Reformer 
-To be added
+The Reformer ([Kitaev et al. 2020](https://arxiv.org/pdf/2001.04451.pdf)) identified three areas of transformer inefficiency:  
+
+1) Memory in a model with $N$ layers has to store $N$-times more activations than that of a single layer network.  
+2) The depth $d_{ff}$ (hidden dimension) of the feed forward networks is generally much larger than than the depth $d_{model}$ (embedding dimension), which results in very high memory use.  
+3) Standard self-attention is computed in $O(n^2)$ time and space complexity where $n$ is the sequence length, because each token needs to attend to every other token.  
+
+
+1) We can solve the problem of having $N$ blocks activations by using **Revnets** ([Gomez et al. 2017](https://arxiv.org/pdf/1707.04585.pdf)). Standard residual connections require us to store activations during the forward pass which we then use to compute the gradients during the backward pass. Reversible residual connections allow us to reconstruct the activations of the current layer from the activations of the previous layer. Reversible networks works by having inputs $(x_1,x_2)$ such that $(x_1,x_2) \mapsto{(y_1,y_2)}$, where $(y_1, y_2)$ is the output.
+
+ $y_1 = x_1 + F(x_2)$ $y_2 = x_2 + G(y_1)$. 
+ 
+ Using these formulas, we can compute the activations needed for any layer during backpropagation by simply subtracting the residuals instead of adding them like in a traditional resnet. 
+ 
+ $x_2 = y_2 - G(y_1)$ and $x_1 = y_1 - F(x_2)$
+
+The Reformer incorporates Revnets with the attention and the feed forward network and move the layer norm inside the residual blocks.
+
+$Y_1 = X_1 + Attention(X_2)$ and $Y_2 = X_2 + FeedForward(Y_1)$
+
+Reversible residual connections allow us to only storea activations for one layer, instead of $N$ layers.
+
+2) The authors of the paper deal with large memory usage from the feed forward network by **chunking** the computation into $c$ chunks.
+
+$Y_2 = [Y_2^{(1)};...;Y_2^{(c)}] = [X_2^{(1)} + FeedForward(Y_1^{(1)};..; X_2^{(c)} + FeedForward(Y_1^{(c)})] $
+
+Since we can compute feed-forward layers independent across positions (unlike self-attention) we perform computation on one chunk at a time. Note that this does slow down the network, since we usually batch the operations together to make use of GPUs, but processing one chunk at a time helps reduce the memory required.
+
+3) The third problem deals with approximating self-attention. We can accomplish through [**locality-sensitive hashing (LSH)**](https://en.wikipedia.org/wiki/Locality-sensitive_hashing#LSH_algorithm_for_nearest_neighbor_search). Why locality-sensitive hashing for approximating self-attention? As we know the reason self-attention is $O(n^2)$ is because of $softmax(QK^T)$ creates a matrix of size [batch_size x seq_len x seq_len]. But we also know that taking the softmax of $(QK^T)$ makes it so that the largest elements dominate the matrix and almost every element will be squished to almost 0. LSH allows us to consider a small subset of say 32 or 64 keys, that are most similar to our key, and attend to only this subset of 32 or 64 keys.
+
+Okay, but how does LSH work? LSH is an efficient way to do a nearest neighbor search in a high dimensional vector space. We take a hash function $h(x)$ and an input vector $x$, and we pass $x$ through our hash function, and $x$ gets placed in a bucket. The goal of LSH is to place vectors that are similar in the same bucket, and vectors that aren't similar in different buckets.
+
+In standard self-attention, we use three separate linear projections to project our input vector $x$ into the query, key, and value vector. In LSH, we share the linear projection between the $K$ and $Q$, so our $K$ vector $ = Q$ vector. We define our hash function as $h(x) = max([xR;-xR])$, where $R$ is a fixed random projection matrix of size $[d_k,b/2]$ where $xR$ and $-xR$ are concatenated together. Once we've hashed our vectors, vectors only need to attend to other vectors that are in the same bucket, as opposed to in standard self-attention where every vector has to attend to every other vector. 
+
+<p align="center">
+  <img src="/images/making-transformers-efficient/reformer-hashing.png" width="60%">
+</p>
+
+
+LSH attention can be formalized given a query position $i$ as  
+<p align="center">
+$o_i = \sigma{j \in{P_i}} exp(q_i * k_j - z(i, P_i))v_j$ where $P_i = \{j: i\geq{j}\}$
+</p>
+
+$P_i$ represents the set that the query at position $i$ attends to, and $z$ denotes the partition function(the normalizing term in the softmax). This form of self-attention is still scaled by $\sqrt{d_k}$, it's just omitted by the authors for clarity. 
+
+They then employ the use of **multi-round hashing**, where we hash for $n_{rounds}$ to reduce the likelihood that similar vectors get placed in separate buckets. This improves the performance of the model at the expense of more computation required.  
+
+It's also worth noting that during causal language modeling, the authors of the paper masked not only the future words, but, also masked words from attending to itself, unless only there was no other word to attend to, like the first token in a sequence.
 
 ## Retroformer
