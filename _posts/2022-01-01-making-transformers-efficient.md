@@ -33,6 +33,8 @@ The final loss function is masked language modelling, which is just cross entrop
 
 Lastly, DistilBERT also optimize the training of their model according to RoBERTa ([Liu et al. 2019](https://arxiv.org/pdf/1907.11692.pdf)), which found that the original BERT model was underfit and it's performance increased when it was trained longer on more data. It also dropped the next sentence prediction task during the pre-training of the model and dynamically changed the masking pattern on the training data during language modelling, which further improved the performance of the model. 
 
+DistilBERT is initialized using BERT's weights, by taking one layer out of two (because DistilBERT has half the layers). This helps the network converge faster.
+
 
 ## A brief recap of transformer self-attention
 
@@ -138,4 +140,28 @@ They then employ the use of **multi-round hashing**, where we hash for $n_{round
 It's also worth noting that during causal language modeling, the authors of the paper masked not only the future words, but, also masked words from attending to itself, unless only there was no other word to attend to, like the first token in a sequence.
 
 ## Retroformer
+RETRO (**R**etrieval-**E**nhanced **Tr**ansf**O**rmer)([Borgeaud et al. 2021](https://arxiv.org/pdf/2112.04426.pdf)) is a retrieval based transformer that uses a separate database to perform lookups. The advantage of having an outside query-able database means that we don't need to store all the information within our model's parameters and can rely on a database "lookup" to augment extra information. For example, if we were to deploy a transformer based model for QA to cover the news, we wouldn't need to re-train often in order to update the network's "knowledge", instead we could just update the database. This also means that we don't need an absurdly large model such as GPT-3's 175 billion parameters, and can rely on a much smaller model which we could fine-tune on 1 GPU. The smallest version of Retro is ~150 million parameters, which is slightly larger than BERT-base. Retro is also promising because we can use pre-trained models, and augment them with a database (hence the name). 
+
+<p align="center">
+  <img src="/images/making-transformers-efficient/Retro-model.png" width="60%">
+</p>
+Okay, but how does this work under the hood? RETRO is made up of both an encoder stack and a decoder stack (like the original transformer paper). They also create a key-value database made up of frozen BERT embeddings (i.e they take the information they want to store (which are chunks of tokens) and pass it into the database as a BERT embedding). Using frozen BERT embeddings means that they don't need to recompute embeddings later on. The key-value pairs are stored as   
+[$N$, $F$], where $N$ is the neighbor chunk used to compute the key and $F$ is the continuation in the original document. We can compute $BERT(N)$ by simply passing chunk $N$ through BERT, and taking the chunk embedding output and averaging it. Here $BERT(N)$ represents the averaged embedding of a chunk *found in the database*. We can the compute $BERT(C)$ where $C$ is a chunk *computed from our input and not from the database* and compute an approximate $k$-nearest neighbor search by taking the $L_2$ distance of the two vectors.  
+ <p align="center">
+$d(C,N) = \Vert BERT(C) - BERT(N) \Vert_2^2$
+</p>
+
+The model retrieves the two nearest neighbors and their continuations ($F$). Using the ScaNN library, they're able to query 2 trillion tokens in only 10 ms.
+<p align= "center">
+  <img src="/images/making-transformers-efficient/retro_pseudo_code.png" width="60%">
+</p>
+
+While this seems like a lot, we can see that the RETRO encoder is actually quite similar to the diagram. We take two inputs $H$, which is an intermediate activation and $RET(C_u)_{1\leq u \leq l}$, which are the retrieved neighbors. We take $H$ and chunk it, and then first compute the embeddings. We only chunk and compute the embeddings once, right at the beginning, regardless of the number of encoders. We then go through each layer of the encoder, first computing the bi-directional attention of each embedding $E_u^j$, then compute the cross-attention of the $E_u^j$ and $H_u$ which is an intermediary of the last token in chunk $C_u$. We then take the computed value and pass it through a final feed forward network return the output of that.
+
+Cross-attention differs from self-attention because in self-attention, the query, key, and value vectors all come from the same input vector after applying a linear projection.
+
+The decoder stack is made up of a standard transformer decoder (like one found in GPT), and interweaves a RETRO decoder between every 3rd layer starting at layer 9. Here we take an input embedding $X$ and apply causal mask (i.e can't look at future words/tokens) to get output $H$. When we reach the first RETRO block, we take the activation $E$ from the final layer of the encoder. FOr every subsequent RETRO block that we hit, we compute the chunked cross-attention of $H$ and $E$. At the end of each block (for both the standard decoder and RETRO decoder), we process the output with a feed forward network. Once we've iterated through all the layers of the decoder, we can get our output logits which we can push through a softmax to get our probability distribution of our next word choice.
+
+RETRO opens up a whole new field, where the authors experimented with RETROfitting pre-trained models, and saw a boost in performance. Check out the original paper where they addressed much more in depth about training and evaluating the performance of the model, especially with regard to test set leakage.
+
 
