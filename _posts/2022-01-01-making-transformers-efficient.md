@@ -128,7 +128,7 @@ In standard self-attention, we use three separate linear projections to project 
 
 LSH attention can be formalized given a query position $i$ as  
 <p align="center">
-$o_i = \sigma{j \in{P_i}} exp(q_i * k_j - z(i, P_i))v_j$ where $P_i = \{j: i\geq{j}\}$
+$o_i = \sum_{j \in{P_i}} $$exp(q_i * k_j - z(i, P_i))v_j$ where $P_i = \{j: i\geq{j}\}$
 </p>
 
 $P_i$ represents the set that the query at position $i$ attends to, and $z$ denotes the partition function(the normalizing term in the softmax). This form of self-attention is still scaled by $\sqrt{d_k}$, it's just omitted by the authors for clarity. 
@@ -138,3 +138,4 @@ They then employ the use of **multi-round hashing**, where we hash for $n_{round
 It's also worth noting that during causal language modeling, the authors of the paper masked not only the future words, but, also masked words from attending to itself, unless only there was no other word to attend to, like the first token in a sequence.
 
 ## Retroformer
+
