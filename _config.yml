@@ -126,6 +126,9 @@ author:
     - label: "Instagram"
       icon: "fab fa-fw fa-instagram"
       # url: "https://instagram.com/"
+    - label: ":hugs:  justinqbui"
+      icon: ":hugs:"
+      url: "https://huggingface.co/justinqbui"
 
 # Site Footer
 footer:
@@ -228,6 +231,8 @@ plugins:
   - jekyll-gist
   - jekyll-feed
   - jekyll-include-cache
+  - jemoji
+  
 
 # mimic GitHub Pages with --safe
 whitelist:
@@ -281,6 +286,18 @@ defaults:
   - scope:
       path: ""
       type: posts
+    values:
+      layout: single
+      author_profile: true
+      read_time: false
+      comments:  true
+      share: true
+      related: true
+
+  # _notes
+  - scope:
+      path: ""
+      type: notes
     values:
       layout: single
       author_profile: true
