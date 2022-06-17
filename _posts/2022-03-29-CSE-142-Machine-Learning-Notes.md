@@ -262,8 +262,3 @@ We assign the confidence factor $\alpha_t$ based on the error $\epsilon_t$ ```${
 
 Boosting is a bias reduction technique (increase accuracy).
 
-## Machine Learning Experiments
-
-
-### Cross validation
-Cross validation 
