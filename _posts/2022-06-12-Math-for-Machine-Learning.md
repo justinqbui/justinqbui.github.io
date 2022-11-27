@@ -289,12 +289,12 @@ The following are three linear transformations on a set of vectors in $\mathbb{R
 
 $$
 B = (b_1, \dots, b_n), \; \; \tilde{B} = (\tilde{b}_1, \dots, \tilde{b_n})
-$$
+$$  
 of V and 
 
 $$
 C = (c_1, \dots, c_n), \; \; \tilde{C} = (\tilde{c}_1, \dots, \tilde{c_n})
-$$
+$$  
 of W, and a transformation matrix $A_{\Phi}$ of $\Phi$ w.r.t $B$ and $C$, the corresponding transformation matrix $A_\Phi$ w.r.t the bases $\tilde{B}$ and $\tilde{C}$ is given as 
 
 $$
@@ -317,9 +317,49 @@ $$
 
 We call $V$ the domain and $W$ the codomain of $\Phi$.
 
-Intuitively, we can think of the kernelç as the set of vectors $v \in V$ that $\Phi$ maps onto the neutral element $0_w \in W$. The image is the set of vectors $w \in W$ that can be "reached" by $\Phi$ from any vector in $V$.  
+Intuitively, we can think of the kernel as the set of vectors $v \in V$ that $\Phi$ maps onto the neutral element $0_w \in W$. The image is the set of vectors $w \in W$ that can be "reached" by $\Phi$ from any vector in $V$.  
 
+<p align="center">
+  <img src="/images/math4_ml/image_kernel.png" width = "70%">
+</p>
 
-# Vector Calculus
+- $\Phi$ is injective (one-to-one) iff $ker(\Phi) = \\{\pmb{0}\\}$
+
+# Calculus
+**Derivative:** The derivative of a function $f$ tells us the average slope of a function.
+
+$$
+\frac{df}{dx} := \lim_{h \to 0} \frac{f(x + h) - f(x)}{h}
+$$
+
+Some basic but important differentiation rules:
+  - *Product rule:* $(f(x)g(x))' = f'(x)g(x) + f(x)g'(x)$  
+  - *Quotient rule* $(\frac{f(x)}{g(x)})' = \frac{f'(x)g(x) - f(x)g'(x)}{(g(x))^2} $  
+  - *Sum rule:* $(f(x) + g(x))' = f'(x) + g'(x)$  
+  - *Chain rule:* $(g(f(x)))' = (g \circ f)'(x) = g'(f(x))f'(x)$   
+    - $g \circ f$ denotes function composition $x \mapsto f(x) \mapsto g(f(x))$  
+
+**Partial derivates:** For a function $f: \mathbb{R}^n \to \mathbb{R}, x \mapsto f(\pmb{x}), \pmb{x} \in \mathbb{R}^n$ of $n$ variables $x_1,\dots, x_n$ we define the partial derivative as 
+
+$$
+\frac{\partial f}{\partial x_1} = \lim_{h \to 0} \frac{f(x_1 + h, x_2, \dots x_n) - f(\pmb{x})}{h}
+$$
+
+$$
+\vdots
+$$
+
+$$
+\frac{\partial f}{\partial x_n} = \lim_{h \to 0} \frac{f(x_1,\dots,x_{n - 1}, x_n+ h) - f(\pmb{x})}{h}
+$$
+
+and collect them in the row vector 
+
+$$
+\nabla_x f = grad f = \frac{df}{dx} = \begin{bmatrix}\frac{\partial f}{\partial x_1} & \frac{\partial f}{\partial x_2} & \dots & \frac{\partial f}{\partial x_n} \end{bmatrix} \in \mathbb{R}^{1 \times n}
+$$
+
+where $n$ is the number of variables and 1 is the dimension of the image/range/codomain of $f$. We call this row vector the *gradient of $f$*.
+
 
 # Probability and Statistics
