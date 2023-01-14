@@ -63,20 +63,47 @@ Using binary vs text is more efficient in both size and for compressing/decompre
 Data is organized into relations; each relation is a set of tuples. A table is an accepted visual representation of a relation, and each row of a table makes up a tuple. Relational models use SQL for queries. It's important to note that SQL is a declarative language, where  you specify the outputs you want, and the computer figures out the steps needed to get you the queried outputs. These models require following a very strict schema and schema management is painful. 
 
 #### NoSQL
-There are two main kinds of NoSQL models: document model and graph model. The **document model** is built around the concept of “document.” A document is often a single continuous string, encoded as JSON, XML, or a binary format like BSON (Binary JSON). All documents in a document database are assumed to be encoded in the same format. Each document has a unique key that represents that document, which can be used to retrieve it.
+The benefit of NoSQL is that it doesn't restrict us to a certain schema (and schema management is very painful!). 
+
+There are two main kinds of NoSQL models: document model and graph model. The **document model** is built around the concept of “document.” A document is often a single continuous string, encoded as JSON, XML, or a binary format like BSON (Binary JSON). All documents in a document database are assumed to be encoded in the same format. Each document has a unique key that represents that document, which can be used to retrieve it. It does this by shifting the responsibility of assuming structures from the application that writes the data to the application that reads the data.
 
 The **graph model** is built around the concept of a “graph.” A graph consists of nodes and edges, where the edges represent the relationships between the nodes. A database that uses graph structures to store its data is called a graph database. If in document databases, the content of each document is the priority, then in graph databases, the relationships between data items are the priority.
 
+<p align="center">
+  <img src="/images/designing_ml_systems/sql_nosql.png" width = "100%">
+</p>
 #### Structured vs Unstructured Data
 There are two kinds of data, structured and unstructured. Structured data follows a pre-defined schema, making data very easily to analyze. The disadvantage of structured data is that updating a schema requires updating the data within the schema as well. 
 
-Unstructured data follows a predefined schema, but it still might contain intrinsic patterns that help with extracting features. This allows us to store data with any type or format and we can just convert our data to bytestring. 
+Unstructured data doesn't follow a predefined schema, but it still might contain intrinsic patterns that help with extracting features. This allows us to store data with any type or format and we can just convert our data to bytestring. 
 
 <p align="center">
   <img src="/images/designing_ml_systems/data_structure.png" width = "80%">
 </p>
 
 A **data warehouse** is a repository for storing structured data. A **data lake** is a repo for storing unstructured data. 
+
+### Data Storage and Processing
+Data formats and data models specify the interface for how users can store and retrieve data. Storage engines, also known as databases, are the implementation of how data is stored and retrieved on machines.
+
+#### Transactional and Analytical Processing
+*Online transaction processing (OLTP)* is the process in which transactions (tweets, uber orders, etc) are inserted as they are generated, and are occasionally updated when something changes, or deleted when they are no longer needed. These actions are stored in transactional databases, which generally fulfill the low latency, high availability requirement (since they're generally customer facing). 
+
+ - Transactional databases generally fulfill ACID (atomicity, consistency, isolation, durability).
+    - Atomicity: A property in databases where all steps in a transaction are completed. If any step fails, than all other steps should fail. If someone requests an uber, and payment is declined, than don't order a car. 
+    - Consistency: To guarantee that all transactions should follow predefined rules. Ie a transaction should only be able to be made by valid users. 
+    - Isolation: To guarantee that all transactions happen at the same time as if they were isolated. Ie two users shouldn't be able to book the same driver.
+    - Durability: To guarantee that even after a transaction has been committed, it'll remain committed even in the case of a system failure. A ride should still come even if your phone dies. 
+
+
+### ETL: Extract, Transform, Load
+When data is *extracted* from different sources, it’s first *transformed* into the desired format before being *loaded* into the target destination such as a database or a data warehouse. The **extract** phase is where we extract the data we want from our data sources and reject the data that we don't want (malformed, corrupted, etc). During the **transform** phase, we do the vast majority of our processing. We apply our data transformations including but not limited to transposing, deduplicating, sorting, aggregating, deriving new features, more data validating, etc. The **load** phase describes how and how often we want to load our data into our target destination.
+
+ <p align="center">
+  <img src="/images/designing_ml_systems/etl.png" width = "80%">
+</p>
+
+ETL is attractive because it allows for the fast arrival of data since there’s little processing needed before data is stored. As the amount of data we have scales the less efficient (and less attractive) this solution becomes since it requires searching through a massive amount of raw data. 
 
 ### Modes of Dataflow
 
@@ -86,8 +113,16 @@ Process A writes to a database and process B reads from said database. While the
 #### Data Passing through Services
 Process A sends a request to process B that specifies the data that process A wants, and process B returns the requested data over the same network. This is called *request-driven*. The most popular styles of requests used for passing data through networks are REST (representational state transfer) and RPC (remote procedure call). One major difference is that REST was designed for requests over networks, whereas RPC “tries to make a request to a remote network service look the same as calling a function or method in your programming language.” Because of this, “REST seems to be the predominant style for public APIs. The main focus of RPC frameworks is on requests between services owned by the same organization, typically within the same data center. Request-driven data passing is synchronous: the target service has to listen to the request for the request to go through.
 
+ <p align="center">
+  <img src="/images/designing_ml_systems/request_driven.png" width = "80%">
+</p>
+
 #### Data Passing Through Real-Time Transport
 A piece of data broadcast to a real-time transport is called an event. This architecture is, therefore, also called *event-driven*. In this kind of event, we use a middle-man called a *broker* for our other services to send and receive data.
+
+ <p align="center">
+  <img src="/images/designing_ml_systems/broker.png" width = "80%">
+</p>
 
 **Pubsub** is a type of a real-time transport which is short for *publish-subscribe*. In the pubsub model, any service can publish to different topics in a real-time transport, and any service that subscribes to a topic can read all the events in that topic. The services that produce data don’t care about what services consume their data. Pubsub solutions often have a retention policy— data will be retained in the real-time transport for a certain period of time (e.g., seven days) before being deleted or moved to a permanent storage (like Amazon S3).
 
@@ -319,13 +354,16 @@ Bagging has the most positive effect on unstable methods, such as NNs, trees, an
 
 ### Model Training
 
+#### AutoML
+AutoML is the process of automating finding the optimal ML aglorithms for a real world situation. **Soft AutoML** is the process of searching for the proper hyperparameter tuning (learning rate, batch size, dropout, quantitization, etc) in a given search space. 
+
 
 #### Distributed Training
 
 When data doesn't fit into memory, we first need algorithms for preprocessing (e.g. zero-centering, normalizing, whitening), shuffling, and batching data out-of-memory and in parallel. We can also make use of gradient checkpointing to allow our system to do more computation with less memory. 
 
 #### Data Parallelism
-The most common parallelization method is data parallelism: you split your data on multiple machines, train your model on all of them, and accumulate gradients. If we use synchronous stochastic gradient descent (SSGD - we wait for each machine to finish a run before peforming a gradient update), we run into the issue of stragglers slowing down and bottlenecking our throughput. We can also use Asynchronous SGD (AGD), which updates from each machine separately. This becomes an issue when one gradient is updated from a machine before theg radients from another machine have come in. 
+The most common parallelization method is data parallelism: you split your data on multiple machines, train your model on all of them, and accumulate gradients. If we use synchronous stochastic gradient descent (SSGD - we wait for each machine to finish a run before peforming a gradient update), we run into the issue of stragglers slowing down and bottlenecking our throughput. We can also use Asynchronous SGD (AGD), which updates from each machine separately. This becomes an issue when one gradient is updated from a machine before the gradients from another machine have come in. 
 
 #### Model Parallelism 
 
@@ -384,7 +422,7 @@ A model might perform better on the majority of instances, and under-perform on 
 ## ML Deployment
 
 ## Data Distribution Shifts and Monitoring
-As mentioned previously, ML systems are most likely to fail from softare reasons, mostly related to distributed systems and not ML reasons. ML fails silently. 
+As mentioned previously, ML systems are most likely to fail from software reasons, mostly related to distributed systems and not ML reasons. ML fails silently. 
 
 One of the most common reasons for ML to fail is **data distribution shift**. This happens when unseen data aren't being drawn from the same distribution as the training set that the algorithm was trained on. There are two major reasons for this to occur: Data in the real world is infinite and multifaceted. Our data in training is by virtue finite, and constrained by money, resources, time, sampling mistakes, etc. The second is because real world data isn't **stationary**. If an actor does something ludicrious and out of character, they might recieve a huge spike in searches, but not to see what tv shows they were in, but to figure out what they did. These shifts can be sudden, or gradual. 
 
@@ -415,16 +453,20 @@ The main challenge of online prediction is reducing the latency (end-to-end) to 
 - A model that can generate speed at an acceptable latency for our end-user. 
 
 ### Unifying Batch Pipeline and Streaming Pipeline
-Companies can often benefit from using both batch and streaming predictions to "enhance" their ML models. An example of this is Google Maps. When we compute arrival time
+Companies can often benefit from using both batch and streaming predictions to "enhance" their ML models. An example of this is Google Maps. When we compute arrival time, we might train on data from the past month, but during inference we might want to use other information like the average speed of the cars in the past 5 mins. 
 
 <p align="center">
   <img src="/images/designing_ml_systems/online_pred_design.png" width = "90%">
 </p>
 
+### ML on the Cloud and on the Edge
+Deciding if we want our ML applications to run on the cloud or the edge is an important decision to make. Running ML on the cloud is extremely expensive, especially with solutions from AWS/GCP/etc. It also requires an active internet connection, so if network latency is an issue this won't work. Lastly, edge deployment is better for privacy, since packets aren't being sent over a network that could be intercepted. The obvious downside of edge computing is the limitation of the chips themselves, regarding memory and computational load, as well as maintaining the battery life. 
+
+
 ### Detecting Data Distribution Shift
 The biggest indicator is if a metric start's decreasing, accuracy, F1 score, recall, etc. This is generally only possible if our data has "natural" labels.
 
-We can use **statistical methods** to detect domain shift, comparing min, median, mean, max, percentile (25th, 50th, etc), skewness, kurtosis, etc. We treat our training set as a baseline, and incoming data as our new distribution. We might tr aseat incoming data time series, and measure every data distribution at hour, daily, etc against our baseline. 
+We can use **statistical methods** to detect domain shift, comparing min, median, mean, max, percentile (25th, 50th, etc), skewness, kurtosis, etc. We treat our training set as a baseline, and incoming data as our new distribution. We might treat incoming data time series, and measure every data distribution at hour, daily, etc against our baseline. 
 
 **Monitoring** refers to the act of tracking, measuring, and logging different metrics that can help us determine when something goes wrong. We can measure click-rate very easily. We can also use additional metrics, such as watch-time, completion percentage and even a manual report/feedback button to gather more data on our predictions. We can measure our prediction distribution, and assuming that our model hasn't changed, than different output distributions over time mean a change in inputs over time. We might want to validate that our input features are within an acceptable range (ie age can't be negative) or if our feature belongs to a pre-determined set. 
 
@@ -455,7 +497,7 @@ A large bottleneck of continual learning is labeled data. Our models can only be
 
 The largest challenge is evaluating models, since continual learning amplifies the risk of a catastrophic failure. Each iteration of the model poses another opportunity for it to fail. 
 
-Another point of pain are dealing with certain algorithms. NNs were well with fine-tuning with small micro-batches, but matrix based models (like collobrative filtering) and tree-based work quite a bit worse when dealing with this. When dealing with incoming data, if we're normalizing or using anything that relies on mean, median, etc, it makes it much more difficult to clean our data since we only have access to a subset of our data. 
+Another point of pain are dealing with certain algorithms. NNs work well with fine-tuning with small micro-batches, but matrix based models (like collobrative filtering) and tree-based work quite a bit worse when dealing with this. When dealing with incoming data, if we're normalizing or using anything that relies on mean, median, etc, it makes it much more difficult to clean our data since we only have access to a subset of our data. 
 
 
 ### Four Stages of Continual Learning
@@ -465,11 +507,11 @@ Testing offline involves two kinds of testing: test splits and backtesting. Test
 
 #### A/B Testing
 
-A/B testing is a way to compare two variants of an object, typically by testing respon‐ ses to these two variants, and determining which of the two variants is more effective.
+A/B testing is a way to compare two variants of an object, typically by testing responses to these two variants, and determining which of the two variants is more effective.
 
 - Deploy the candidate model alongside the existing model.
 - A percentage of traffic is routed to the new model for predictions; the rest is routed to the existing model for predictions. It’s common for both variants to serve prediction traffic at the same time. However, there are cases where one model’s predictions might affect another model’s predictions—e.g., in ride sharing’s dynamic pricing, a model’s predicted prices might influence the number of available drivers and riders, which, in turn, influence the other model’s predictions. In those cases, you might have to run your variants alternatively, e.g., serve model A one day and then serve model B the next day.
-- Monitor and analyze the predictions and user feedback, if any, from both models to determine whether the difference in the two models’ performance is statisti‐ cally significant.
+- Monitor and analyze the predictions and user feedback, if any, from both models to determine whether the difference in the two models’ performance is statistically significant.
 
 We need to make sure that A/B testing is truly random, or else we'll be dealing with confounding factors. Secondly, we need to make sure that we run our predictions on a sufficiently large amount of samples to get a holistic view. 
 
@@ -483,3 +525,47 @@ Canary release is a technique to reduce the risk of introducing a new software v
 - Stop when either the canary serves all the traffic (the candidate model has replaced the existing model) or when the canary is aborted.
 
 The key difference from A/B testing is that we don't roll out our releases randomly, we might start with a smaller market first. 
+
+#### Interleaving Experiments
+Interleaving experiments is the process of displaying both model's recommendations (for a rec system) to an end user, and seeing which one the users prefer. When applying this to ranking, we know that the top result will always be clicked the most, so we can randomly assign recommendation positions to either model with equal probability. 
+
+
+## Infrastructure and Tooling for MLOps
+Infrastructure helps automate processes, reducing the need for specialized knowledge and engineering time. Having more mature infrastructure is necessary when we scale our ML applications and data usage. 
+
+In the ML world, infrastructure is the set of fundamental facilities that support the development and maintenance of ML systems. There are 4 major systems:
+- Storage and compute: The storage layer is where data is collected and stored. The compute layer provides the compute needed to run your ML workloads such as training a model, computing features, generating features, etc.
+- Resource management comprises tools to schedule and orchestrate your workloads to make the most out of your available compute resources. Examples of tools in this category include Airflow, Kubeflow, and Metaflow.
+- ML platform: This provides tools to aid the development of ML applications such as model stores, feature stores, and monitoring tools. Examples of tools in this category include SageMaker and MLflow.
+- Development environment: This is usually referred to as the dev environment; it is where code is written and experiments are run. Code needs to be versioned and tested. Experiments need to be tracked.
+
+### Storage and Compute
+The storage layer has seen a massive shift to the cloud in the past decade or so. Since storage is cheap, we can use something simple like S3. Next we move onto compute, which we can either use something simple like EC2, or Lambda if our business requirements allow us to go serverless. The benefit of using the cloud is two-fold, one it's easily scalable up or down as our needs change, and two it takes away alot of developer hours setting up all the infrastucture required.
+
+### Resource Management
+A *cron* job allows us to schedule repetitive jobs that run at fixed times. *Schedulers* are cron jobs that can handle dependencies: ie if job A suceeds, run job B, else run job C. Schedulers deal with job-type abstractions such as DAGs, priority queues, user-level quotas (i.e., the maximum number of instances a user can use at a given time), etc.
+
+
+#### ML Platform
+While the definition varies from company to company, alot of ML platforming is to provide shared infrastructure across ML applications. 
+
+A **model store** allows us to store our models and their associated meta-data/artifacts. Things we want to keep track of are:
+  - *Model definition:* information required to re-create the shape of the model (ie layers of a NN).
+  - *Model parameters:* actual values of the parameters of the model. Combined with the definition to get the model.
+  - *Featurize and predict functions:* Given a prediction request, how do we extract features and input extracted features to get back our prediction? These are generally wrapped in endpoints. 
+  - *Dependencies:* eg python version.
+  - *Data:* Way of identifying what data was used for training (ie dataset name/version).
+  - *Model Generation Code:* this is the code that specifies how are model was created including:
+    - What frameworks it used
+    - How it was trained
+    - The details on how the train/valid/test splits were created
+    - The number of experiments run
+    - The range of hyperparameters considered
+    - The actual set of hyperparameters that final model used
+  - *Experiment artifacts:* artifacts generated during training such as the loss curve
+  - *Tags:* Tags to aid in discovery and filtering, including the owner of the model and the task it was used for. 
+
+A **feature store** is responsible for 3 main things: feature management, feature transformation, and feature consistency.
+ - *Feature Management:* This allows a company to store features that can be used across different models. This can be thought of as a feature catalog, where other teams can browse for features that they might find useful for their model/usecase.
+ - *Feature Computation:* The feature engineering logic to extract the features from the data. We can either compute the features every time we access the data if it isn't too expensive, or just store them after computing them once. 
+ - *Feature Consistency:* Unify the logic for batch and streaming features to ensure consistency between features during training and during inference. This is because production code might be written in a different language than development code for efficiency reasons. 
